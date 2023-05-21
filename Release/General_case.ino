@@ -180,6 +180,7 @@ void playMusic(String musicName)
           }
           if (((UIstate == UISTATE_MUSICBACK) or (UIstate == UISTATE_MUSICNEXT)) and digitalRead(SW3) == HIGH and (delayCounter == 200)) //触发中断
           {
+            //中断 1
             delayCounter = 0;
             i2s_driver_uninstall(I2S_NUM_0);
             file.close();
@@ -202,11 +203,9 @@ void playMusic(String musicName)
         {
           delayCounter += 1;
         }
-        Serial.print(delayCounter);
       }
       else
       {
-        musicPlayState = 1;
         break;
       }
     }
@@ -228,16 +227,21 @@ void playMusic(String musicName)
         break;
     }
   }
-  Serial.println("Finished reading file.");
+  //中断 2
+  musicPlayState = 1;
+  delayCounter = 0;
+  file.close();
   i2s_driver_uninstall(I2S_NUM_0);
+  
+  Serial.println("Finished reading file.");
 }
 
 
 
 void loop() {
-  if ((UIstate == UISTATE_MUSICBACK) and (digitalRead(SW3) == HIGH))
+  if ((UIstate == UISTATE_MUSICBACK) and (delayCounter > 100)) //delay 100T
   {
-    delay(500);
+    delayCounter = 0;
     SPIClass spi = SPIClass(HSPI);
     spi.begin(14 /* SCK */, 2 /* MISO */, 15 /* MOSI */, 13 /* SS */);
     if (!SD.begin(13 /* SS */, spi, 80000000)) {
@@ -248,9 +252,9 @@ void loop() {
       musicIndex -= 1;
     playMusic("/" + wavList[musicIndex]);
   }
-  if ((UIstate == UISTATE_MUSICNEXT) and (digitalRead(SW3) == HIGH))
+  if ((UIstate == UISTATE_MUSICNEXT) and (delayCounter > 100)) //delay 100T
   {
-    delay(500);
+    delayCounter = 0;
     SPIClass spi = SPIClass(HSPI);
     spi.begin(14 /* SCK */, 2 /* MISO */, 15 /* MOSI */, 13 /* SS */);
     if (!SD.begin(13 /* SS */, spi, 80000000)) {
@@ -297,7 +301,7 @@ void loop() {
     if (musicVolume > MINMUSICVOL)
       musicVolume -= 1;
   }
-  if (delayCounter < 30)
+  if (delayCounter < 255)
   {
     delayCounter += 1;
   }
