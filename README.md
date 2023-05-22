@@ -22,4 +22,4 @@ cool!
 
 cannot upload the code to the ESP32 Board when it is installed on the bottom board. You need to uninstall the ESP32 Board from the bottom board and then upload the code.
 
-Hope you will like it~
+**Hope you will like it~**
