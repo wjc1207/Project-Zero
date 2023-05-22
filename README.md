@@ -8,4 +8,4 @@ The ESP32 Audio Board is a MP3 with strong power. It has a microphone, a 128x64 
 
 ### How to get one?
 
-1. download the relative PCB documents from /PCB/
+1. download the relative PCB documents from [PCB documents](https://github.com/wjc74751/Project-Zero/tree/main/PCB)
