@@ -1,5 +1,5 @@
 #define SW1 (16)
-#define SW2 (17)
+#define SW2 (3)
 void setup() {
   // put your setup code here, to run once:
   pinMode(SW1,INPUT);
@@ -16,7 +16,7 @@ void loop() {
   }
   if (digitalRead(SW2) == HIGH)
   {
-    Serial.println("17");  
+    Serial.println("3");  
     delay(500);  
   }
 }
