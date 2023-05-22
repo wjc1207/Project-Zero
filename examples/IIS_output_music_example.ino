@@ -1,6 +1,9 @@
+//A wav format music called "Moon Halo" should be in your SD card.
+
+
 #include "driver/i2s.h"
 #include "FS.h"
-#include "SD.h"、
+#include "SD.h"
 #include "SPI.h"
 
 #define BUFFER_SIZE 256  // I2S缓冲区大小
@@ -12,9 +15,8 @@ File file;
 
 void setup() {
   pinMode(23, OUTPUT);
-  pinMode(16,INPUT);
-  pinMode(17,INPUT);
   Serial.begin(115200);
+  
   SPIClass spi = SPIClass(HSPI);
   spi.begin(14 /* SCK */, 2 /* MISO */, 15 /* MOSI */, 13 /* SS */);
   if (!SD.begin(13 /* SS */, spi, 80000000)) {
@@ -110,46 +112,12 @@ void setup() {
     }
     Serial.println("Finished reading file.");
   }
-  else if (bit_depth == 8)
-  {
-    while (1) {
-      uint8_t buffer[BUFFER_SIZE];
-      if (file.available() > 0)
-      {
-        size_t bytes_read = file.read(buffer, BUFFER_SIZE);
-        for (size_t i = 0; i < bytes_read; i += 1) {
-          uint8_t sample = buffer[i];
-          size_t bytes_written;
-          i2s_write(I2S_NUM_0, &sample, sizeof(sample), &bytes_written, portMAX_DELAY);
-        }
-      }
-      else
-        break;
-    }
-    Serial.println("Finished reading file.");
-  }
   digitalWrite(23, HIGH);
-
 }
-void readFile(fs::FS &fs, const char * path) {
-  Serial.printf("Reading file: %s\n", path);
 
-  File file = fs.open(path);
-  if (!file) {
-    Serial.println("Failed to open file for reading");
-    return;
-  }
-
-  Serial.print("Read from file: ");
-  while (file.available()) {
-    Serial.write(file.read());
-  }
-  file.close();
-
-}
 int16_t apply_equalizer(int16_t sample) {
   // 增加 6 dB 的增益
-  sample = sample >> 1;
+  sample = sample >> 2;
   
   // 截断到最大值 65535
   if (sample > (65535)) {
