@@ -18,6 +18,7 @@
 #define UISTATE_VOLDOWN (5)
 #define UISTATE_MUSICBACK (2)
 #define UISTATE_MUSICNEXT (4)
+#define UISTATE_PLAYPAUSE (3)
 #define MINMUSICVOL (1)
 #define MAXMUSICVOL (5)
 
@@ -28,6 +29,7 @@
 #define SW1 (3)
 #define SW2 (16)
 #define SW3 (32)
+#define SHUTDOWN (23)
 #define SCREEN_WIDTH (128)
 #define SCREEN_HEIGHT (64)
 
@@ -39,6 +41,7 @@ uint8_t delayCounter = 0;
 uint8_t UIstate = 0;
 uint8_t musicPlayState = 0; //0: 正在播放 1: 播放完成
 uint8_t musicVolume = 4;
+uint8_t playPauseState = 0; //0: 播放 1：暂停
 
 String* wavList;
 uint8_t wavNum[1] = { -1};
@@ -47,6 +50,7 @@ void setup() {
   pinMode(SW1, INPUT);
   pinMode(SW2, INPUT);
   pinMode(SW3, INPUT);
+  pinMode(SHUTDOWN, OUTPUT);
   Serial.begin(115200);
   Wire.begin();
   Wire.setClock(400000L);
@@ -76,15 +80,16 @@ void setup() {
   //get music name list
   wavList = listDir(SD, "/", 2, wavNum);
   playMusic("/" + wavList[musicIndex]);
-
 }
+
 
 void playMusic(String musicName)
 {
-  float sample_rate;
-  float bit_depth;
+  uint16_t sample_rate;
+  uint8_t bit_depth;
   int16_t samples[BUFFER_SIZE];  // 采样值数组
-  musicPlayState = 0;
+  musicPlayState = 0; //0: 正在播放 1：播放完成
+  delayCounter = 0;
 
   file = SD.open(musicName);
   displayUI(musicName);
@@ -152,56 +157,83 @@ void playMusic(String musicName)
       uint8_t buffer[BUFFER_SIZE];
       if (file.available() > 0) //music haven't played yet
       {
-        size_t bytes_read = file.read(buffer, BUFFER_SIZE);
-        for (size_t i = 0; i < bytes_read; i += 2) {
-          int16_t sample = (buffer[i + 1] << 8) | (buffer[i]);
-          // 应用均衡器
-          sample = apply_equalizer(sample);
+        if (playPauseState == 0)//播放
+        {
+          digitalWrite(SHUTDOWN, LOW);
+          size_t bytes_read = file.read(buffer, BUFFER_SIZE);
+          for (size_t i = 0; i < bytes_read; i += 2) {
 
-          size_t bytes_written;
-          i2s_write(I2S_NUM_0, &sample, sizeof(sample), &bytes_written, portMAX_DELAY);
+            int16_t sample = (buffer[i + 1] << 8) | (buffer[i]);
+            // 应用均衡器
+            sample = apply_equalizer(sample);
 
-          // 检查错误
-          if (bytes_written != sizeof(sample)) {
-            ESP_LOGE(TAG, "Failed to write audio data: error code %d", bytes_written);
-            // 处理错误情况
-          }
-          if ((UIstate < MAXUISTATE) and (digitalRead(SW2) == HIGH) and (delayCounter == 200))
-          {
-            delayCounter = 0;
-            UIstate += 1;
-            displayUI(musicName);
-          }
-          else if ((UIstate > MINUISTATE) and (digitalRead(SW1) == HIGH) and (delayCounter == 200)) //延迟触发
-          {
-            delayCounter = 0;
-            UIstate -= 1;
-            displayUI(musicName);
-          }
-          if (((UIstate == UISTATE_MUSICBACK) or (UIstate == UISTATE_MUSICNEXT)) and digitalRead(SW3) == HIGH and (delayCounter == 200)) //触发中断
-          {
-            //中断 1
-            delayCounter = 0;
-            i2s_driver_uninstall(I2S_NUM_0);
-            file.close();
-            return;
-          }
-          if ((UIstate == UISTATE_VOLUP) and digitalRead(SW3) == HIGH  and (delayCounter == 200))
-          {
-            delayCounter = 0;
-            if (musicVolume < MAXMUSICVOL)
-              musicVolume += 1;
-          }
-          else if ((UIstate == UISTATE_VOLDOWN) and digitalRead(SW3) == HIGH  and (delayCounter == 200))
-          {
-            delayCounter = 0;
-            if (musicVolume > MINMUSICVOL)
-              musicVolume -= 1;
+            size_t bytes_written;
+            i2s_write(I2S_NUM_0, &sample, sizeof(sample), &bytes_written, portMAX_DELAY); //播放
+
+            // 检查错误
+            if (bytes_written != sizeof(sample)) {
+              ESP_LOGE(TAG, "Failed to write audio data: error code %d", bytes_written);
+              // 处理错误情况
+            }
           }
         }
-        if (delayCounter < 200)
+        else //暂停
+        {
+          //高电平->关闭
+          digitalWrite(SHUTDOWN, HIGH);
+        }
+        if ((UIstate < MAXUISTATE) and (digitalRead(SW2) == HIGH) and (delayCounter > 180))
+        {
+          delayCounter = 0;
+          UIstate += 1;
+          displayUI(musicName);
+        }
+        else if ((UIstate > MINUISTATE) and (digitalRead(SW1) == HIGH) and (delayCounter > 180)) //延迟触发
+        {
+          delayCounter = 0;
+          UIstate -= 1;
+          displayUI(musicName);
+        }
+        if (((UIstate == UISTATE_MUSICBACK) or (UIstate == UISTATE_MUSICNEXT)) and digitalRead(SW3) == HIGH and (delayCounter > 180)) //触发中断
+        {
+          //中断 1
+          delayCounter = 0;
+          i2s_driver_uninstall(I2S_NUM_0);
+          file.close();
+          return;
+        }
+        if ((UIstate == UISTATE_VOLUP) and digitalRead(SW3) == HIGH  and (delayCounter > 180))
+        {
+          delayCounter = 0;
+          if (musicVolume < MAXMUSICVOL)
+            musicVolume += 1;
+        }
+        else if ((UIstate == UISTATE_VOLDOWN) and digitalRead(SW3) == HIGH  and (delayCounter > 180))
+        {
+          delayCounter = 0;
+          if (musicVolume > MINMUSICVOL)
+            musicVolume -= 1;
+        }
+        if ((UIstate == UISTATE_PLAYPAUSE) and (digitalRead(SW3) == HIGH) and (playPauseState == 0) and (delayCounter > 180)) //播放->暂停
+        {
+          delayCounter = 0;
+          playPauseState = 1;
+          displayUI(musicName);
+          Serial.println(playPauseState);
+        }
+        if (UIstate == UISTATE_PLAYPAUSE and (digitalRead(SW3) == HIGH) and (playPauseState == 1) and (delayCounter > 180))
+        {
+          delayCounter = 0;
+          playPauseState = 0;
+          displayUI(musicName);
+          Serial.println(playPauseState);
+        }
+
+        if (delayCounter < 255)
         {
           delayCounter += 1;
+          if (playPauseState == 1)
+            delay(3);
         }
       }
       else
@@ -210,29 +242,13 @@ void playMusic(String musicName)
       }
     }
   }
-  else if (bit_depth == 8)
-  {
-    while (1) {
-      uint8_t buffer[BUFFER_SIZE];
-      if (file.available() > 0)
-      {
-        size_t bytes_read = file.read(buffer, BUFFER_SIZE);
-        for (size_t i = 0; i < bytes_read; i += 1) {
-          int8_t sample = buffer[i];
-          size_t bytes_written;
-          i2s_write(I2S_NUM_0, &sample, sizeof(sample), &bytes_written, portMAX_DELAY);
-        }
-      }
-      else
-        break;
-    }
-  }
+
   //中断 2
   musicPlayState = 1;
   delayCounter = 0;
   file.close();
   i2s_driver_uninstall(I2S_NUM_0);
-  
+
   Serial.println("Finished reading file.");
 }
 
@@ -278,29 +294,6 @@ void loop() {
       musicIndex += 1;
     playMusic("/" + wavList[musicIndex]);
   }
-  Serial.println(wavList[musicIndex]);
-  if ((UIstate < MAXUISTATE) and (digitalRead(SW2) == HIGH) and (delayCounter == 30))
-  {
-    UIstate += 1;
-    displayUI("/" + wavList[musicIndex]);
-  }
-  else if ((UIstate > MINUISTATE) and (digitalRead(SW1) == HIGH) and (delayCounter == 30))
-  {
-    UIstate -= 1;
-    displayUI("/" + wavList[musicIndex]);
-  }
-  if ((UIstate == UISTATE_VOLUP) and digitalRead(SW3) == HIGH  and (delayCounter == 30))
-  {
-    delayCounter = 0;
-    if (musicVolume < MAXMUSICVOL)
-      musicVolume += 1;
-  }
-  else if ((UIstate == UISTATE_VOLDOWN) and digitalRead(SW3) == HIGH  and (delayCounter == 30))
-  {
-    delayCounter = 0;
-    if (musicVolume > MINMUSICVOL)
-      musicVolume -= 1;
-  }
   if (delayCounter < 255)
   {
     delayCounter += 1;
@@ -334,9 +327,20 @@ void displayUI(String musicName)
   else
     drawLeftArrow(40, 32, 0);
   if (UIstate == 3)
-    drawPauseSymbol(60, 32, 1);
+  {
+    if (playPauseState == 0)
+      drawPauseSymbol(60, 32, 1);
+    else
+      drawPlaySymbol(60, 32, 1);
+  }
   else
-    drawPauseSymbol(60, 32, 0);
+  {
+    if (playPauseState == 0)
+      drawPauseSymbol(60, 32, 0);
+    else
+      drawPlaySymbol(60, 32, 0);
+  }
+
   if (UIstate == 4)
     drawRightArrow(80, 32, 1);
   else
