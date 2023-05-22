@@ -12,4 +12,12 @@ The ESP32 Audio Board is a MP3 with strong power. It has a microphone, a 128x64 
 2. get the PCB from the PCB maker like JLC
 3. buy the relative components from the online shopping platform like Taobao
 4. Solder PCBs and components
-5. download the relative code to the MP3 and enjoy
+5. upload the relative code to the MP3 and enjoy
+
+### advantage
+
+cool!
+
+### problems
+
+cannot upload the code to the ESP32 Board when it is installed on the bottom board. You need to uninstall the ESP32 Board from the bottom board and then upload the code.
