@@ -20,6 +20,6 @@ cool!
 
 ### problems
 
-cannot upload the code to the ESP32 Board when it is installed on the bottom board. You need to uninstall the ESP32 Board from the bottom board and then upload the code.
+When the ESP32 Board is installed on the bottom board, the code can not be uploaded. You need to uninstall it to upload the code to it.
 
 **Hope you will like it~**
