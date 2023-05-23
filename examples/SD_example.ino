@@ -1,3 +1,5 @@
+//SD card example
+//operate the SD card
 /*
  * Connect the SD card to the following pins:
  *

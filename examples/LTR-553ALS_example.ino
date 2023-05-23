@@ -1,4 +1,5 @@
-//LTR-553ALS
+//LTR-553ALS example
+//read the data from the LTR-553ALS sensor
 #include <LTR55x.h>
 
 #include <Wire.h>
