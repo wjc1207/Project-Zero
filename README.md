@@ -20,7 +20,8 @@ It has functions of play and pause, change to the pervious/next music, adjust th
 
 ### advantage
 
-cool!
+1. cool
+2. cheap
 
 ### problems
 
