@@ -1,3 +1,5 @@
+//LIS3DHTR example
+//read the data from the LIS3DHTR sensor
 #include <Wire.h>
 #define LIS3DHTR_ADDR 0x19
 

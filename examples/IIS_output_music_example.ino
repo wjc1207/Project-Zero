@@ -1,3 +1,5 @@
+//I2S output music example
+//read the music data from the SD card and output the music by the external DAC and bridge amplifier
 //A wav format music called "Moon Halo" should be in your SD card.
 
 
@@ -112,6 +114,7 @@ void setup() {
     }
     Serial.println("Finished reading file.");
   }
+  //shut down the bridge amplifier
   digitalWrite(23, HIGH);
 }
 
