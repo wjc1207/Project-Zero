@@ -1,11 +1,13 @@
+//I2S output example
+//Output a 700Hz sine wave by external DAC and bridge amplifier
 #include "driver/i2s.h"
 
 
-#define BUFFER_SIZE 1024  // I2S缓冲区大小
-const float amplitude = 0.2;  // 正弦波振幅，范围：0-1
-float frequency = 600; // 正弦波频率，单位：Hz
-float sample_rate = 44100;
-float bit_depth = 16;
+#define BUFFER_SIZE 256  // I2S缓冲区大小
+const float amplitude = 0.1;  // 正弦波振幅，范围：0-1
+const float frequency = 700; // 正弦波频率，单位：Hz
+const float sample_rate = 44100;
+const float bit_depth = 16;
 const float phase = 0; // 初始相位，范围：0-2*PI
 int16_t samples[BUFFER_SIZE];  // 采样值数组
 float t = 0; // 计算时间戳
@@ -19,10 +21,9 @@ void setup() {
     .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
     .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_PCM),
     .intr_alloc_flags = 0,
-    .dma_buf_count = 2,
-    
-    .dma_buf_len = 256,
-    .use_apll = false
+    .dma_buf_count = 4,
+    .dma_buf_len = 64,
+    .use_apll = false 
   };
   i2s_pin_config_t pin_config = {
     .bck_io_num = 25,
