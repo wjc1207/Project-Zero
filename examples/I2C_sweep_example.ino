@@ -1,9 +1,12 @@
+//This is a I2C sweep example.
 #include <Wire.h>
 
 void setup() {
+  //initial
   Wire.begin();
   Serial.begin(115200);
   delay(1000);
+  
   Serial.println("Scanning I2C bus...");
   byte count = 0;
   for (byte i = 1; i < 127; i++) {
