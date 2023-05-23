@@ -22,6 +22,7 @@ It has functions of play and pause, change to the pervious/next music, adjust th
 
 1. cool
 2. cheap
+3. mutiple sensors (7)
 
 ### problems
 
