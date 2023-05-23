@@ -116,7 +116,6 @@ void setup() {
 }
 
 int16_t apply_equalizer(int16_t sample) {
-  // 增加 6 dB 的增益
   sample = sample >> 2;
   
   // 截断到最大值 65535
