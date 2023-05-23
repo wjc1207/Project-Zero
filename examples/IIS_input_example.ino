@@ -1,12 +1,8 @@
-
 /*
   ESP32 I2S Microphone Sample
-  esp32-i2s-mic-sample.ino
   Sample sound from I2S microphone, display on Serial Plotter
   Requires INMP441 I2S microphone
 
-  DroneBot Workshop 2022
-  https://dronebotworkshop.com
 */
 
 // Include I2S driver
