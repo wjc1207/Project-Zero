@@ -1,5 +1,5 @@
+//LTR-553ALS
 #include <LTR55x.h>
-// Simple I2C test for ebay 128x64 oled.
 
 #include <Wire.h>
 LTR55x ltr55x;
