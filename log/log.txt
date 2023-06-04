@@ -1,4 +1,4 @@
-2023/6/3
+2023/6/3 V1.1
 1. fix the problem that SD card need to initial for mutiple times.
 2. support display Chinese!
 3. text scrolling
