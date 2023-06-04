@@ -2,7 +2,8 @@
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"
-#include "mySD.h"
+#include "SDCard.h"
+#include "Pattern.h"
 #include <Arduino.h>
 #include <Wire.h>
 #include <U8g2lib.h>
@@ -82,7 +83,7 @@ void playMusic(String musicName)
   int16_t samples[BUFFER_SIZE];  // 采样值数组
   uint8_t musicNameLen = musicName.length();
   String musicNameBuffer = musicName;
-  uint8_t scrollCounter = 0;
+  uint16_t scrollCounter = 0;
   musicPlayState = 0; //0: 正在播放 1：播放完成
   delayCounter = 0;
 
@@ -228,7 +229,7 @@ void playMusic(String musicName)
         {
           if (musicName.length() > 15) //scrolling
           {
-            musicNameBuffer = musicNameBuffer.substring(1);
+            musicNameBuffer = musicNameBuffer.substring(2);
             if (musicNameBuffer.length() < 15)
             {
               musicNameBuffer = musicName;
@@ -243,7 +244,7 @@ void playMusic(String musicName)
           if (playPauseState == 1)
             delay(3);
         }
-        if (scrollCounter < 255)
+        if (scrollCounter < 1024)
         {
           scrollCounter += 1;
         }
@@ -312,40 +313,40 @@ void displayUI(String musicName)
   oled.print(musicName);
 
   if (UIstate == 0) //被选中
-    drawLeftArrow(0, 0, 1);
+    drawPattern(LEFTARROW, 0, 0, 1);
   else
-    drawLeftArrow(0, 0, 0);
+    drawPattern(LEFTARROW, 0, 0, 0);
   if (UIstate == 1)
-    drawUpArrow(60, 16, 1);
+    drawPattern(UPARROW, 60, 16, 1);
   else
-    drawUpArrow(60, 16, 0);
+    drawPattern(UPARROW, 60, 16, 0);
   if (UIstate == 2)
-    drawLeftArrow(40, 32, 1);
+    drawPattern(LEFTARROW, 40, 32, 1);
   else
-    drawLeftArrow(40, 32, 0);
+    drawPattern(LEFTARROW, 40, 32, 0);
   if (UIstate == 3)
   {
     if (playPauseState == 0)
-      drawPauseSymbol(60, 32, 1);
+      drawPattern(PAUSESYMBOL, 60, 32, 1);
     else
-      drawPlaySymbol(60, 32, 1);
+      drawPattern(PLAYSYMBOL, 60, 32, 1);
   }
   else
   {
     if (playPauseState == 0)
-      drawPauseSymbol(60, 32, 0);
+      drawPattern(PAUSESYMBOL, 60, 32, 0);
     else
-      drawPlaySymbol(60, 32, 0);
+      drawPattern(PLAYSYMBOL, 60, 32, 0);
   }
 
   if (UIstate == 4)
-    drawRightArrow(80, 32, 1);
+    drawPattern(RIGHTARROW, 80, 32, 1);
   else
-    drawRightArrow(80, 32, 0);
+    drawPattern(RIGHTARROW, 80, 32, 0);
   if (UIstate == 5)
-    drawDownArrow(60, 48, 1);
+    drawPattern(DOWNARROW, 60, 48, 1);
   else
-    drawDownArrow(60, 48, 0);
+    drawPattern(DOWNARROW, 60, 48, 0);
 
 
   oled.sendBuffer();
@@ -366,217 +367,13 @@ void drawPixel(uint8_t X, uint8_t Y, uint8_t Color)
   oled.setDrawColor(Color);
   oled.drawPixel(X, Y);
 }
-uint8_t drawRightArrow(uint8_t offsetX, uint8_t offsetY, uint8_t displayMode)
-{
-  if ((offsetX < 0) or (offsetX > 120) or (offsetY < 0) or (offsetY > 56))
-  {
-    return ERRORCODE;
-  }
-  uint8_t bitMap[8][8] = {
-    {1, 1, 0, 0, 0, 0, 0, 0}, //1
-    {0, 1, 1, 1, 0, 0, 0, 0},
-    {0, 0, 0, 1, 1, 1, 0, 0},
-    {0, 0, 0, 0, 0, 1, 1, 0},
-    {0, 0, 0, 0, 0, 1, 1, 0},
-    {0, 0, 0, 1, 1, 1, 0, 0},
-    {0, 1, 1, 1, 0, 0, 0, 0},
-    {1, 1, 0, 0, 0, 0, 0, 0}
-  };
-  for (int Y = 0; Y < 8; Y += 1)
-  {
-    for (int X = 0; X < 8; X += 1)
-    {
-      if (displayMode == 0) //正色
-      {
-        if (bitMap[Y][X] == 1)
-          drawPixel(X + offsetX, Y + offsetY, 1);
-        else
-          drawPixel(X + offsetX, Y + offsetY, 0);
-      }
-      else //反色
-      {
-        if (bitMap[Y][X] == 1)
-          drawPixel(X + offsetX, Y + offsetY, 0);
-        else
-          drawPixel(X + offsetX, Y + offsetY, 1);
-      }
-    }
-  }
 
-  return SUCCESSCODE;
-}
-uint8_t drawLeftArrow(uint8_t offsetX, uint8_t offsetY, uint8_t displayMode)
+uint8_t drawPattern(const uint8_t bitMap[8][8], uint8_t offsetX, uint8_t offsetY, uint8_t displayMode)
 {
   if ((offsetX < 0) or (offsetX > 120) or (offsetY < 0) or (offsetY > 56))
   {
     return ERRORCODE;
   }
-  uint8_t bitMap[8][8] = {
-    {0, 0, 0, 0, 0, 0, 1, 1}, //1
-    {0, 0, 0, 0, 1, 1, 1, 0},
-    {0, 0, 1, 1, 1, 0, 0, 0},
-    {0, 1, 1, 0, 0, 0, 0, 0},
-    {0, 1, 1, 0, 0, 0, 0, 0},
-    {0, 0, 1, 1, 1, 0, 0, 0},
-    {0, 0, 0, 0, 1, 1, 1, 0},
-    {0, 0, 0, 0, 0, 0, 1, 1}
-  };
-  for (int Y = 0; Y < 8; Y += 1)
-  {
-    for (int X = 0; X < 8; X += 1)
-    {
-      if (displayMode == 0) //正色
-      {
-        if (bitMap[Y][X] == 1)
-          drawPixel(X + offsetX, Y + offsetY, 1);
-        else
-          drawPixel(X + offsetX, Y + offsetY, 0);
-      }
-      else //反色
-      {
-        if (bitMap[Y][X] == 1)
-          drawPixel(X + offsetX, Y + offsetY, 0);
-        else
-          drawPixel(X + offsetX, Y + offsetY, 1);
-      }
-    }
-  }
-
-  return SUCCESSCODE;
-}
-uint8_t drawUpArrow(uint8_t offsetX, uint8_t offsetY, uint8_t displayMode)
-{
-  if ((offsetX < 0) or (offsetX > 120) or (offsetY < 0) or (offsetY > 56))
-  {
-    return ERRORCODE;
-  }
-  uint8_t bitMap[8][8] = {
-    {0, 0, 0, 0, 0, 0, 0, 0}, //1
-    {0, 0, 0, 1, 1, 0, 0, 0},
-    {0, 0, 1, 1, 1, 1, 0, 0},
-    {0, 0, 1, 0, 0, 1, 0, 0},
-    {0, 1, 1, 0, 0, 1, 1, 0},
-    {0, 1, 0, 0, 0, 0, 1, 0},
-    {1, 1, 0, 0, 0, 0, 1, 1},
-    {1, 0, 0, 0, 0, 0, 0, 1}
-  };
-  for (int Y = 0; Y < 8; Y += 1)
-  {
-    for (int X = 0; X < 8; X += 1)
-    {
-      if (displayMode == 0) //正色
-      {
-        if (bitMap[Y][X] == 1)
-          drawPixel(X + offsetX, Y + offsetY, 1);
-        else
-          drawPixel(X + offsetX, Y + offsetY, 0);
-      }
-      else //反色
-      {
-        if (bitMap[Y][X] == 1)
-          drawPixel(X + offsetX, Y + offsetY, 0);
-        else
-          drawPixel(X + offsetX, Y + offsetY, 1);
-      }
-    }
-  }
-
-  return SUCCESSCODE;
-}
-uint8_t drawDownArrow(uint8_t offsetX, uint8_t offsetY, uint8_t displayMode)
-{
-  if ((offsetX < 0) or (offsetX > 120) or (offsetY < 0) or (offsetY > 56))
-  {
-    return ERRORCODE;
-  }
-  uint8_t bitMap[8][8] = {
-    {1, 0, 0, 0, 0, 0, 0, 1}, //1
-    {1, 1, 0, 0, 0, 0, 1, 1},
-    {0, 1, 0, 0, 0, 0, 1, 0},
-    {0, 1, 1, 0, 0, 1, 1, 0},
-    {0, 0, 1, 0, 0, 1, 0, 0},
-    {0, 0, 1, 1, 1, 1, 0, 0},
-    {0, 0, 0, 1, 1, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0}
-  };
-  for (int Y = 0; Y < 8; Y += 1)
-  {
-    for (int X = 0; X < 8; X += 1)
-    {
-      if (displayMode == 0) //正色
-      {
-        if (bitMap[Y][X] == 1)
-          drawPixel(X + offsetX, Y + offsetY, 1);
-        else
-          drawPixel(X + offsetX, Y + offsetY, 0);
-      }
-      else //反色
-      {
-        if (bitMap[Y][X] == 1)
-          drawPixel(X + offsetX, Y + offsetY, 0);
-        else
-          drawPixel(X + offsetX, Y + offsetY, 1);
-      }
-    }
-  }
-
-  return SUCCESSCODE;
-}
-uint8_t drawPauseSymbol(uint8_t offsetX, uint8_t offsetY, uint8_t displayMode)
-{
-  if ((offsetX < 0) or (offsetX > 120) or (offsetY < 0) or (offsetY > 56))
-  {
-    return ERRORCODE;
-  }
-  uint8_t bitMap[8][8] = {
-    {0, 0, 0, 0, 0, 0, 0, 0}, //1
-    {0, 1, 1, 0, 0, 1, 1, 0},
-    {0, 1, 1, 0, 0, 1, 1, 0},
-    {0, 1, 1, 0, 0, 1, 1, 0},
-    {0, 1, 1, 0, 0, 1, 1, 0},
-    {0, 1, 1, 0, 0, 1, 1, 0},
-    {0, 1, 1, 0, 0, 1, 1, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0}
-  };
-  for (int Y = 0; Y < 8; Y += 1)
-  {
-    for (int X = 0; X < 8; X += 1)
-    {
-      if (displayMode == 0) //正色
-      {
-        if (bitMap[Y][X] == 1)
-          drawPixel(X + offsetX, Y + offsetY, 1);
-        else
-          drawPixel(X + offsetX, Y + offsetY, 0);
-      }
-      else //反色
-      {
-        if (bitMap[Y][X] == 1)
-          drawPixel(X + offsetX, Y + offsetY, 0);
-        else
-          drawPixel(X + offsetX, Y + offsetY, 1);
-      }
-    }
-  }
-
-  return SUCCESSCODE;
-}
-uint8_t drawPlaySymbol(uint8_t offsetX, uint8_t offsetY, uint8_t displayMode)
-{
-  if ((offsetX < 0) or (offsetX > 120) or (offsetY < 0) or (offsetY > 56))
-  {
-    return ERRORCODE;
-  }
-  uint8_t bitMap[8][8] = {
-    {0, 0, 0, 0, 0, 0, 0, 0}, //1
-    {0, 1, 1, 0, 0, 0, 0, 0},
-    {0, 1, 1, 1, 1, 0, 0, 0},
-    {0, 1, 1, 1, 1, 1, 1, 0},
-    {0, 1, 1, 1, 1, 1, 1, 0},
-    {0, 1, 1, 1, 1, 0, 0, 0},
-    {0, 1, 1, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0}
-  };
   for (int Y = 0; Y < 8; Y += 1)
   {
     for (int X = 0; X < 8; X += 1)
