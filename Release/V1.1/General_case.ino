@@ -247,6 +247,8 @@ void playMusic(String musicName)
         if (scrollCounter < 1024)
         {
           scrollCounter += 1;
+          if (playPauseState == 1)
+            delay(1);
         }
         else
         {
@@ -306,6 +308,7 @@ void loop() {
 
 void displayUI(String musicName)
 {
+  digitalWrite(SHUTDOWN, HIGH);
   oled.clearBuffer();
 
   oled.setDrawColor(1);
@@ -348,7 +351,7 @@ void displayUI(String musicName)
   else
     drawPattern(DOWNARROW, 60, 48, 0);
 
-
+  digitalWrite(SHUTDOWN, LOW);
   oled.sendBuffer();
 }
 int16_t apply_equalizer(int16_t sample) {
