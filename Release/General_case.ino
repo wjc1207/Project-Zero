@@ -70,7 +70,7 @@ void setup() {
   oled.display();
 
   //SD initial
-  SPIClass spi = SPIClass(HSPI);
+  static SPIClass spi = SPIClass(HSPI);
   spi.begin(14 /* SCK */, 2 /* MISO */, 15 /* MOSI */, 13 /* SS */);
   if (!SD.begin(13 /* SS */, spi, 80000000)) {
     Serial.println("Card Mount Failed");
@@ -258,12 +258,6 @@ void loop() {
   if ((UIstate == UISTATE_MUSICBACK) and (delayCounter > 100)) //delay 100T
   {
     delayCounter = 0;
-    SPIClass spi = SPIClass(HSPI);
-    spi.begin(14 /* SCK */, 2 /* MISO */, 15 /* MOSI */, 13 /* SS */);
-    if (!SD.begin(13 /* SS */, spi, 80000000)) {
-      Serial.println("Card Mount Failed");
-      return;
-    }
     if (musicIndex > 0)
       musicIndex -= 1;
     playMusic("/" + wavList[musicIndex]);
@@ -271,12 +265,6 @@ void loop() {
   if ((UIstate == UISTATE_MUSICNEXT) and (delayCounter > 100)) //delay 100T
   {
     delayCounter = 0;
-    SPIClass spi = SPIClass(HSPI);
-    spi.begin(14 /* SCK */, 2 /* MISO */, 15 /* MOSI */, 13 /* SS */);
-    if (!SD.begin(13 /* SS */, spi, 80000000)) {
-      Serial.println("Card Mount Failed");
-      return;
-    }
     if (musicIndex < (wavNum[0] - 1))
       musicIndex += 1;
     playMusic("/" + wavList[musicIndex]);
@@ -284,12 +272,6 @@ void loop() {
   if (musicPlayState == 1)
   {
     musicPlayState = 0;
-    SPIClass spi = SPIClass(HSPI);
-    spi.begin(14 /* SCK */, 2 /* MISO */, 15 /* MOSI */, 13 /* SS */);
-    if (!SD.begin(13 /* SS */, spi, 80000000)) {
-      Serial.println("Card Mount Failed");
-      return;
-    }
     if (musicIndex < (wavNum[0] - 1))
       musicIndex += 1;
     playMusic("/" + wavList[musicIndex]);
