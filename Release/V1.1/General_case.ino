@@ -54,7 +54,7 @@ void setup() {
   pinMode(SHUTDOWN, OUTPUT);
   Serial.begin(115200);
   Wire.begin();
-  Wire.setClock(800000L);
+  Wire.setClock(1000000L);
 
   oled.begin();
   oled.enableUTF8Print();
@@ -308,7 +308,6 @@ void loop() {
 
 void displayUI(String musicName)
 {
-  digitalWrite(SHUTDOWN, HIGH);
   oled.clearBuffer();
 
   oled.setDrawColor(1);
@@ -351,7 +350,6 @@ void displayUI(String musicName)
   else
     drawPattern(DOWNARROW, 60, 48, 0);
 
-  digitalWrite(SHUTDOWN, LOW);
   oled.sendBuffer();
 }
 int16_t apply_equalizer(int16_t sample) {
