@@ -9,5 +9,4 @@ Time | real steps | detected steps | error rate
   1        100          100             0%
   2        100           96             4%
   Avg      100           98             2%
-  
 ---
