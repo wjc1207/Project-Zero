@@ -3,4 +3,7 @@
 2. support display Chinese!
 3. text scrolling
 
+2023/6/9 V1.1
+1. Add step detection example
+
 ---
