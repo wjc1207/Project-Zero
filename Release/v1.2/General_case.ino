@@ -38,7 +38,8 @@
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C oled(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 File file;
 uint16_t musicIndex = 0;
-uint8_t delayCounter = 0;
+uint8_t continueSwitchCounter = 0;
+uint8_t triggerDelayCounter = 0;
 uint8_t UIstate = 0;
 uint8_t musicPlayState = 0; //0: 正在播放 1: 播放完成
 uint8_t musicVolume = 3;
@@ -93,8 +94,8 @@ void playMusic(String musicName)
   String musicNameBuffer = musicName;
   uint16_t scrollCounter = 0;
   musicPlayState = 0; //0: 正在播放 1：播放完成
-  delayCounter = 0;
 
+  triggerDelayCounter = 0;
 
   file = SD.open(musicName);
   writeConfig(SD, musicIndex);
@@ -210,50 +211,50 @@ void playMusic(String musicName)
         //高电平->关闭
         digitalWrite(SHUTDOWN, HIGH);
       }
-      if ((UIstate < MAXUISTATE) and (digitalRead(SW2) == HIGH) and (delayCounter > 180))
+      if ((UIstate < MAXUISTATE) and (digitalRead(SW2) == HIGH) and (triggerDelayCounter > 180))
       {
-        delayCounter = 0;
+        triggerDelayCounter = 0;
         UIstate += 1;
         displayUI(musicNameBuffer);
       }
-      else if ((UIstate > MINUISTATE) and (digitalRead(SW1) == HIGH) and (delayCounter > 180)) //延迟触发
+      else if ((UIstate > MINUISTATE) and (digitalRead(SW1) == HIGH) and (triggerDelayCounter > 180)) //延迟触发
       {
-        delayCounter = 0;
+        triggerDelayCounter = 0;
         UIstate -= 1;
         displayUI(musicNameBuffer);
       }
-      if (((UIstate == UISTATE_MUSICBACK) or (UIstate == UISTATE_MUSICNEXT)) and digitalRead(SW3) == HIGH and (delayCounter > 180)) //触发中断
+      if (((UIstate == UISTATE_MUSICBACK) or (UIstate == UISTATE_MUSICNEXT)) and digitalRead(SW3) == HIGH and (triggerDelayCounter > 180)) //触发中断
       {
         //中断 1
-        delayCounter = 0;
+        triggerDelayCounter = 0;
         i2s_driver_uninstall(I2S_NUM_0);
         file.close();
         return;
       }
-      if ((UIstate == UISTATE_VOLUP) and digitalRead(SW3) == HIGH  and (delayCounter > 180))
+      if ((UIstate == UISTATE_VOLUP) and digitalRead(SW3) == HIGH  and (triggerDelayCounter > 180))
       {
-        delayCounter = 0;
+        triggerDelayCounter = 0;
         if (musicVolume < MAXMUSICVOL)
           musicVolume += 1;
         displayUI(musicNameBuffer);
       }
-      else if ((UIstate == UISTATE_VOLDOWN) and digitalRead(SW3) == HIGH  and (delayCounter > 180))
+      else if ((UIstate == UISTATE_VOLDOWN) and digitalRead(SW3) == HIGH  and (triggerDelayCounter > 180))
       {
-        delayCounter = 0;
+        triggerDelayCounter = 0;
         if (musicVolume > MINMUSICVOL)
           musicVolume -= 1;
         displayUI(musicNameBuffer);
       }
-      if ((UIstate == UISTATE_PLAYPAUSE) and (digitalRead(SW3) == HIGH) and (playPauseState == 0) and (delayCounter > 180)) //播放->暂停
+      if ((UIstate == UISTATE_PLAYPAUSE) and (digitalRead(SW3) == HIGH) and (playPauseState == 0) and (triggerDelayCounter > 180)) //播放->暂停
       {
-        delayCounter = 0;
+        triggerDelayCounter = 0;
         playPauseState = 1;
         displayUI(musicNameBuffer);
         Serial.println(playPauseState);
       }
-      if (UIstate == UISTATE_PLAYPAUSE and (digitalRead(SW3) == HIGH) and (playPauseState == 1) and (delayCounter > 180))
+      if (UIstate == UISTATE_PLAYPAUSE and (digitalRead(SW3) == HIGH) and (playPauseState == 1) and (triggerDelayCounter > 180))
       {
-        delayCounter = 0;
+        triggerDelayCounter = 0;
         playPauseState = 0;
         displayUI(musicNameBuffer);
         Serial.println(playPauseState);
@@ -271,9 +272,9 @@ void playMusic(String musicName)
         }
       }
 
-      if (delayCounter < 255)
+      if (triggerDelayCounter < 255)
       {
-        delayCounter += 1;
+        triggerDelayCounter += 1;
         if (playPauseState == 1)
           delay(3);
       }
@@ -297,7 +298,7 @@ void playMusic(String musicName)
 
   //中断 2
   musicPlayState = 1;
-  delayCounter = 0;
+  triggerDelayCounter = 0;
   file.close();
   i2s_driver_uninstall(I2S_NUM_0);
 
@@ -307,16 +308,14 @@ void playMusic(String musicName)
 
 
 void loop() {
-  if ((UIstate == UISTATE_MUSICBACK) and (delayCounter > 100)) //delay 100T
+  if ((UIstate == UISTATE_MUSICBACK)) //delay 100T
   {
-    delayCounter = 0;
     if (musicIndex > 0)
       musicIndex -= 1;
     playMusic("/" + wavList[musicIndex]);
   }
-  if ((UIstate == UISTATE_MUSICNEXT) and (delayCounter > 100)) //delay 100T
+  if ((UIstate == UISTATE_MUSICNEXT)) //delay 100T
   {
-    delayCounter = 0;
     if (musicIndex < (wavNum[0] - 1))
       musicIndex += 1;
     playMusic("/" + wavList[musicIndex]);
@@ -327,10 +326,6 @@ void loop() {
     if (musicIndex < (wavNum[0] - 1))
       musicIndex += 1;
     playMusic("/" + wavList[musicIndex]);
-  }
-  if (delayCounter < 255)
-  {
-    delayCounter += 1;
   }
 }
 
