@@ -37,7 +37,7 @@
 // declare an SSD1306 display object connected to I2C
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C oled(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 File file;
-uint8_t musicIndex = 0;
+uint16_t musicIndex = 0;
 uint8_t delayCounter = 0;
 uint8_t UIstate = 0;
 uint8_t musicPlayState = 0; //0: 正在播放 1: 播放完成
@@ -45,7 +45,8 @@ uint8_t musicVolume = 3;
 uint8_t playPauseState = 0; //0: 播放 1：暂停
 
 String* wavList;
-uint8_t wavNum[1] = { -1};
+uint16_t wavNum[1] = { -1};
+uint16_t lastWavNum = -1;
 
 void setup() {
   pinMode(SW1, INPUT);
@@ -69,8 +70,15 @@ void setup() {
     return;
   }
 
+
   //get music name list
-  wavList = listDir(SD, "/", 2, wavNum);
+  wavList = listDir(SD, "/", wavNum);
+  lastWavNum = readConfig(SD);
+  musicIndex = lastWavNum;
+  if (musicIndex > wavNum[0])
+  {
+    musicIndex = 0;
+  }
   playMusic("/" + wavList[musicIndex]);
 }
 
@@ -89,6 +97,7 @@ void playMusic(String musicName)
 
 
   file = SD.open(musicName);
+  writeConfig(SD, musicIndex);
   displayUI(musicNameBuffer);
   if (!file)
   {
@@ -226,12 +235,14 @@ void playMusic(String musicName)
         delayCounter = 0;
         if (musicVolume < MAXMUSICVOL)
           musicVolume += 1;
+        displayUI(musicNameBuffer);
       }
       else if ((UIstate == UISTATE_VOLDOWN) and digitalRead(SW3) == HIGH  and (delayCounter > 180))
       {
         delayCounter = 0;
         if (musicVolume > MINMUSICVOL)
           musicVolume -= 1;
+        displayUI(musicNameBuffer);
       }
       if ((UIstate == UISTATE_PLAYPAUSE) and (digitalRead(SW3) == HIGH) and (playPauseState == 0) and (delayCounter > 180)) //播放->暂停
       {
@@ -336,41 +347,46 @@ void displayUI(String musicName)
   oled.setCursor(20, 10);
   oled.print(musicName);
 
+  oled.setCursor(80, 32);
+  oled.print(String(musicIndex + 1) + "/" + String(wavNum[0]));
+
+  oled.setCursor(80, 48);
+  oled.print(String(musicVolume) + "/" + String(5));
   if (UIstate == 0) //被选中
     drawPattern(LEFTARROW, 0, 0, 1);
   else
     drawPattern(LEFTARROW, 0, 0, 0);
   if (UIstate == 1)
-    drawPattern(UPARROW, 60, 16, 1);
+    drawPattern(UPARROW, 50, 16, 1);
   else
-    drawPattern(UPARROW, 60, 16, 0);
+    drawPattern(UPARROW, 50, 16, 0);
   if (UIstate == 2)
-    drawPattern(LEFTARROW, 40, 32, 1);
+    drawPattern(LEFTARROW, 30, 32, 1);
   else
-    drawPattern(LEFTARROW, 40, 32, 0);
+    drawPattern(LEFTARROW, 30, 32, 0);
   if (UIstate == 3)
   {
     if (playPauseState == 0)
-      drawPattern(PAUSESYMBOL, 60, 32, 1);
+      drawPattern(PAUSESYMBOL, 50, 32, 1);
     else
-      drawPattern(PLAYSYMBOL, 60, 32, 1);
+      drawPattern(PLAYSYMBOL, 50, 32, 1);
   }
   else
   {
     if (playPauseState == 0)
-      drawPattern(PAUSESYMBOL, 60, 32, 0);
+      drawPattern(PAUSESYMBOL, 50, 32, 0);
     else
-      drawPattern(PLAYSYMBOL, 60, 32, 0);
+      drawPattern(PLAYSYMBOL, 50, 32, 0);
   }
 
   if (UIstate == 4)
-    drawPattern(RIGHTARROW, 80, 32, 1);
+    drawPattern(RIGHTARROW, 70, 32, 1);
   else
-    drawPattern(RIGHTARROW, 80, 32, 0);
+    drawPattern(RIGHTARROW, 70, 32, 0);
   if (UIstate == 5)
-    drawPattern(DOWNARROW, 60, 48, 1);
+    drawPattern(DOWNARROW, 50, 48, 1);
   else
-    drawPattern(DOWNARROW, 60, 48, 0);
+    drawPattern(DOWNARROW, 50, 48, 0);
 
   oled.sendBuffer();
 }
