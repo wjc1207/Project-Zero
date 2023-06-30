@@ -41,7 +41,7 @@ uint8_t musicIndex = 0;
 uint8_t delayCounter = 0;
 uint8_t UIstate = 0;
 uint8_t musicPlayState = 0; //0: 正在播放 1: 播放完成
-uint8_t musicVolume = 4;
+uint8_t musicVolume = 3;
 uint8_t playPauseState = 0; //0: 播放 1：暂停
 
 String* wavList;
@@ -129,7 +129,7 @@ void playMusic(String musicName)
     .sample_rate = sample_rate,
     .bits_per_sample = i2s_bits_per_sample_t(bit_depth),
     .channel_format = num_channels == 1 ? I2S_CHANNEL_FMT_ONLY_LEFT : I2S_CHANNEL_FMT_RIGHT_LEFT,
-    .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_STAND_MSB),
+    .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S),
     .intr_alloc_flags = 0,
     .dma_buf_count = 6,
     .dma_buf_len = 512,                                                   // int                    DMA Buffer Length
@@ -151,16 +151,17 @@ void playMusic(String musicName)
 
   Serial.println("Begin reading file.");
 
-  if (bit_depth == 16)
-  {
-    while (1) {
-      uint8_t buffer[BUFFER_SIZE];
-      if (file.available() > 0) //music haven't played yet
+
+  while (1) {
+    uint8_t buffer[BUFFER_SIZE];
+    if (file.available() > 0) //music haven't played yet
+    {
+      if (playPauseState == 0)//播放
       {
-        if (playPauseState == 0)//播放
+        digitalWrite(SHUTDOWN, LOW);
+        size_t bytes_read = file.read(buffer, BUFFER_SIZE);
+        if (bit_depth == 16)
         {
-          digitalWrite(SHUTDOWN, LOW);
-          size_t bytes_read = file.read(buffer, BUFFER_SIZE);
           for (size_t i = 0; i < bytes_read; i += 2) {
 
             int16_t sample = (buffer[i + 1] << 8) | (buffer[i]);
@@ -168,7 +169,7 @@ void playMusic(String musicName)
             sample = apply_equalizer(sample);
 
             size_t bytes_written;
-            i2s_write(I2S_NUM_0, &sample, sizeof(sample), &bytes_written, portMAX_DELAY); //播放
+            i2s_write(I2S_NUM_0, &sample, sizeof(sample), &bytes_written, 1000); //播放
 
             // 检查错误
             if (bytes_written != sizeof(sample)) {
@@ -177,93 +178,111 @@ void playMusic(String musicName)
             }
           }
         }
-        else //暂停
+        else if (bit_depth == 32)
         {
-          //高电平->关闭
-          digitalWrite(SHUTDOWN, HIGH);
-        }
-        if ((UIstate < MAXUISTATE) and (digitalRead(SW2) == HIGH) and (delayCounter > 180))
-        {
-          delayCounter = 0;
-          UIstate += 1;
-          displayUI(musicNameBuffer);
-        }
-        else if ((UIstate > MINUISTATE) and (digitalRead(SW1) == HIGH) and (delayCounter > 180)) //延迟触发
-        {
-          delayCounter = 0;
-          UIstate -= 1;
-          displayUI(musicNameBuffer);
-        }
-        if (((UIstate == UISTATE_MUSICBACK) or (UIstate == UISTATE_MUSICNEXT)) and digitalRead(SW3) == HIGH and (delayCounter > 180)) //触发中断
-        {
-          //中断 1
-          delayCounter = 0;
-          i2s_driver_uninstall(I2S_NUM_0);
-          file.close();
-          return;
-        }
-        if ((UIstate == UISTATE_VOLUP) and digitalRead(SW3) == HIGH  and (delayCounter > 180))
-        {
-          delayCounter = 0;
-          if (musicVolume < MAXMUSICVOL)
-            musicVolume += 1;
-        }
-        else if ((UIstate == UISTATE_VOLDOWN) and digitalRead(SW3) == HIGH  and (delayCounter > 180))
-        {
-          delayCounter = 0;
-          if (musicVolume > MINMUSICVOL)
-            musicVolume -= 1;
-        }
-        if ((UIstate == UISTATE_PLAYPAUSE) and (digitalRead(SW3) == HIGH) and (playPauseState == 0) and (delayCounter > 180)) //播放->暂停
-        {
-          delayCounter = 0;
-          playPauseState = 1;
-          displayUI(musicNameBuffer);
-          Serial.println(playPauseState);
-        }
-        if (UIstate == UISTATE_PLAYPAUSE and (digitalRead(SW3) == HIGH) and (playPauseState == 1) and (delayCounter > 180))
-        {
-          delayCounter = 0;
-          playPauseState = 0;
-          displayUI(musicNameBuffer);
-          Serial.println(playPauseState);
-        }
-        if (scrollCounter == 180)
-        {
-          if (musicName.length() > 15) //scrolling
-          {
-            musicNameBuffer = musicNameBuffer.substring(2);
-            if (musicNameBuffer.length() < 15)
-            {
-              musicNameBuffer = musicName;
+          for (size_t i = 0; i < bytes_read; i += 4) {
+            int32_t sample = (buffer[i + 3] << 24) | (buffer[i + 2] << 16) | (buffer[i + 1] << 8) | (buffer[i]);
+            // 应用均衡器
+            sample = apply_equalizer_32(sample);
+
+            size_t bytes_written;
+            i2s_write(I2S_NUM_0, &sample, sizeof(sample), &bytes_written, 1000); // 播放
+
+            // 检查错误
+            if (bytes_written != sizeof(sample)) {
+              ESP_LOGE(TAG, "Failed to write audio data: error code %d", bytes_written);
+              // 处理错误情况
             }
-            displayUI(musicNameBuffer);
           }
         }
+      }
+      else //暂停
+      {
+        //高电平->关闭
+        digitalWrite(SHUTDOWN, HIGH);
+      }
+      if ((UIstate < MAXUISTATE) and (digitalRead(SW2) == HIGH) and (delayCounter > 180))
+      {
+        delayCounter = 0;
+        UIstate += 1;
+        displayUI(musicNameBuffer);
+      }
+      else if ((UIstate > MINUISTATE) and (digitalRead(SW1) == HIGH) and (delayCounter > 180)) //延迟触发
+      {
+        delayCounter = 0;
+        UIstate -= 1;
+        displayUI(musicNameBuffer);
+      }
+      if (((UIstate == UISTATE_MUSICBACK) or (UIstate == UISTATE_MUSICNEXT)) and digitalRead(SW3) == HIGH and (delayCounter > 180)) //触发中断
+      {
+        //中断 1
+        delayCounter = 0;
+        i2s_driver_uninstall(I2S_NUM_0);
+        file.close();
+        return;
+      }
+      if ((UIstate == UISTATE_VOLUP) and digitalRead(SW3) == HIGH  and (delayCounter > 180))
+      {
+        delayCounter = 0;
+        if (musicVolume < MAXMUSICVOL)
+          musicVolume += 1;
+      }
+      else if ((UIstate == UISTATE_VOLDOWN) and digitalRead(SW3) == HIGH  and (delayCounter > 180))
+      {
+        delayCounter = 0;
+        if (musicVolume > MINMUSICVOL)
+          musicVolume -= 1;
+      }
+      if ((UIstate == UISTATE_PLAYPAUSE) and (digitalRead(SW3) == HIGH) and (playPauseState == 0) and (delayCounter > 180)) //播放->暂停
+      {
+        delayCounter = 0;
+        playPauseState = 1;
+        displayUI(musicNameBuffer);
+        Serial.println(playPauseState);
+      }
+      if (UIstate == UISTATE_PLAYPAUSE and (digitalRead(SW3) == HIGH) and (playPauseState == 1) and (delayCounter > 180))
+      {
+        delayCounter = 0;
+        playPauseState = 0;
+        displayUI(musicNameBuffer);
+        Serial.println(playPauseState);
+      }
+      if (scrollCounter == 180)
+      {
+        if (musicName.length() > 15) //scrolling
+        {
+          musicNameBuffer = musicNameBuffer.substring(2);
+          if (musicNameBuffer.length() < 15)
+          {
+            musicNameBuffer = musicName;
+          }
+          displayUI(musicNameBuffer);
+        }
+      }
 
-        if (delayCounter < 255)
-        {
-          delayCounter += 1;
-          if (playPauseState == 1)
-            delay(3);
-        }
-        if (scrollCounter < 1024)
-        {
-          scrollCounter += 1;
-          if (playPauseState == 1)
-            delay(1);
-        }
-        else
-        {
-          scrollCounter = 0;
-        }
+      if (delayCounter < 255)
+      {
+        delayCounter += 1;
+        if (playPauseState == 1)
+          delay(3);
+      }
+      if (scrollCounter < 1024)
+      {
+        scrollCounter += 1;
+        if (playPauseState == 1)
+          delay(1);
       }
       else
       {
-        break;
+        scrollCounter = 0;
       }
     }
+    else
+    {
+      break;
+    }
   }
+
 
   //中断 2
   musicPlayState = 1;
@@ -357,7 +376,18 @@ void displayUI(String musicName)
 }
 int16_t apply_equalizer(int16_t sample) {
 
-  sample = sample >> (6 - musicVolume);
+  sample = sample >> (5 - musicVolume);
+
+  // 截断到最大值 65535
+  if (sample > (65535)) {
+    sample = (65535);
+  }
+
+  return sample;
+}
+int32_t apply_equalizer_32(int32_t sample) {
+
+  sample = sample >> (5 - musicVolume);
 
   // 截断到最大值 65535
   if (sample > (65535)) {
