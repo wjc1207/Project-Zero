@@ -19,3 +19,4 @@ Add three functions:
 it can remeber the music that you hear last time.
 It can show the index of music you hear just now and the total music number
 It can show the current audio volume and maximum audio volume
+It can switch the music quickly after continuing to switch for 5 songs
