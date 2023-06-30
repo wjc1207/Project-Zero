@@ -94,8 +94,14 @@ void playMusic(String musicName)
   String musicNameBuffer = musicName;
   uint16_t scrollCounter = 0;
   musicPlayState = 0; //0: 正在播放 1：播放完成
-
-  triggerDelayCounter = 0;
+  if (digitalRead(SW3) == HIGH and ((UIstate == UISTATE_MUSICBACK) or (UIstate == UISTATE_MUSICNEXT)))
+  {
+    continueSwitchCounter += 1;
+    if (continueSwitchCounter >= 5)
+      triggerDelayCounter = 120;
+    else
+      triggerDelayCounter = 0;
+   }
 
   file = SD.open(musicName);
   writeConfig(SD, musicIndex);
@@ -288,6 +294,8 @@ void playMusic(String musicName)
       {
         scrollCounter = 0;
       }
+      if (digitalRead(SW3) == LOW and continueSwitchCounter > 0)
+        continueSwitchCounter = 0;
     }
     else
     {
