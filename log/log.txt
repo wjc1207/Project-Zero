@@ -13,3 +13,9 @@ Time | real steps | detected steps | error rate
 
 2023/6/28 V1.2
 1. PT8211-S --> MS4344, improve the audio quality
+
+Add three functions:
+
+it can remeber the music that you hear last time.
+It can show the index of music you hear just now and the total music number
+It can show the current audio volume and maximum audio volume
