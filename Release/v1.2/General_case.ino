@@ -4,35 +4,16 @@
 #include "SPI.h"
 #include "SDCard.h"
 #include "Pattern.h"
+#include "Config.h"
 #include <Arduino.h>
 #include <Wire.h>
 #include <U8g2lib.h>
 
-#define BUFFER_SIZE 256  // I2S缓冲区大小
 // 0X3C+SA0 - 0x3C or 0x3D
 #define I2C_ADDRESS 0x3C
 #define ERRORCODE 0
 #define SUCCESSCODE 1
-#define MINUISTATE (0)
-#define MAXUISTATE (5)
-#define UISTATE_VOLUP (1)
-#define UISTATE_VOLDOWN (5)
-#define UISTATE_MUSICBACK (2)
-#define UISTATE_MUSICNEXT (4)
-#define UISTATE_PLAYPAUSE (3)
-#define MINMUSICVOL (1)
-#define MAXMUSICVOL (5)
 
-
-// Define proper RST_PIN if required.
-#define RST_PIN -1
-#define bufferSize 16
-#define SW1 (33)
-#define SW2 (16)
-#define SW3 (32)
-#define SHUTDOWN (23)
-#define SCREEN_WIDTH (128)
-#define SCREEN_HEIGHT (64)
 
 // declare an SSD1306 display object connected to I2C
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C oled(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
@@ -47,7 +28,7 @@ uint8_t playPauseState = 0; //0: 播放 1：暂停
 
 String* wavList;
 uint16_t wavNum[1] = { -1};
-uint16_t lastWavNum = -1;
+uint16_t lastMusicIndex = -1;
 
 void setup() {
   pinMode(SW1, INPUT);
@@ -74,8 +55,8 @@ void setup() {
 
   //get music name list
   wavList = listDir(SD, "/", wavNum);
-  lastWavNum = readConfig(SD);
-  musicIndex = lastWavNum;
+  lastMusicIndex = readConfig(SD);
+  musicIndex = lastMusicIndex;
   if (musicIndex > wavNum[0])
   {
     musicIndex = 0;
@@ -94,14 +75,16 @@ void playMusic(String musicName)
   String musicNameBuffer = musicName;
   uint16_t scrollCounter = 0;
   musicPlayState = 0; //0: 正在播放 1：播放完成
-  if (digitalRead(SW3) == HIGH and ((UIstate == UISTATE_MUSICBACK) or (UIstate == UISTATE_MUSICNEXT)))
+  if (digitalRead(SW3) == HIGH and ((UIstate == UISTATE_MUSICBACK) or (UIstate == UISTATE_MUSICNEXT))) //quick switch
   {
     continueSwitchCounter += 1;
     if (continueSwitchCounter >= 5)
       triggerDelayCounter = 120;
     else
       triggerDelayCounter = 0;
-   }
+  }
+  else
+    triggerDelayCounter = 0;
 
   file = SD.open(musicName);
   writeConfig(SD, musicIndex);
@@ -147,14 +130,14 @@ void playMusic(String musicName)
     .channel_format = num_channels == 1 ? I2S_CHANNEL_FMT_ONLY_LEFT : I2S_CHANNEL_FMT_RIGHT_LEFT,
     .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S),
     .intr_alloc_flags = 0,
-    .dma_buf_count = 6,
-    .dma_buf_len = 512,                                                   // int                    DMA Buffer Length
+    .dma_buf_count = DMA_BUF_COUNT,
+    .dma_buf_len = DMA_BUF_LEN,                                                   // int                    DMA Buffer Length
     .tx_desc_auto_clear   = true,                                                     // bool                   auto clear tx descriptor if there is underflow condition (helps in avoiding noise in case of data unavailability)
   };
   i2s_pin_config_t pin_config = {
-    .bck_io_num = 26,
-    .ws_io_num = 27,
-    .data_out_num = 25,
+    .bck_io_num = BCK,
+    .ws_io_num = WS,
+    .data_out_num = DATA_OUT,
     .data_in_num = I2S_PIN_NO_CHANGE
   };
   i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
@@ -206,7 +189,7 @@ void playMusic(String musicName)
 
             // 检查错误
             if (bytes_written != sizeof(sample)) {
-              ESP_LOGE(TAG, "Failed to write audio data: error code %d", bytes_written);
+               ESP_LOGE(TAG, "Failed to write audio data: error code %d", bytes_written);
               // 处理错误情况
             }
           }
