@@ -12,7 +12,7 @@
 
 #define I2S_OUT_SCK 26
 #define I2S_OUT_WS 27
-#define I2S_OUT_SD 15
+#define I2S_OUT_SD 25
 
 // Use I2S Processor 0
 #define I2S_IN_PORT I2S_NUM_0
