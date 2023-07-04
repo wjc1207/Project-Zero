@@ -2,6 +2,8 @@ Based on hardware of ESP32 Audio Board v4.1
 
 PT8211-S --> MS4344(CS4344)
 
+Add a IIS_amplifier code
+
 Add three functions:
 
 1. it can remeber the music that you hear last time.
